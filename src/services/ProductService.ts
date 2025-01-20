@@ -1,6 +1,12 @@
-import { safeParse } from "valibot";
+import { safeParse, number, pipe, transform, parse } from "valibot";
 import axios from "axios";
-import { DraftProductSchema, ProductsSchema } from "../types";
+import {
+  DraftProductSchema,
+  Product,
+  ProductSchema,
+  ProductsSchema,
+} from "../types";
+import { toBoolean } from "../utils";
 
 type ProductData = {
   [k: string]: FormDataEntryValue;
@@ -27,19 +33,71 @@ export async function addProduct(data: ProductData) {
   }
 }
 
-
 export async function getProducts() {
   try {
     const url = `${import.meta.env.VITE_API_URL}/api/products`;
-    const { data } = await axios(url)
+    const { data } = await axios(url);
 
     const result = safeParse(ProductsSchema, data.data);
-    if(result.success) {
+    if (result.success) {
       return result.output;
     } else {
-      throw new Error('Hubo un error...')
+      throw new Error("Hubo un error...");
     }
   } catch (error) {
-    console.log(error)
+    console.log(error);
+  }
+}
+
+export async function getProductsById(id: Product["id"]) {
+  try {
+    const url = `${import.meta.env.VITE_API_URL}/api/products/${id}`;
+    const { data } = await axios(url);
+
+    const result = safeParse(ProductSchema, data.data);
+    if (result.success) {
+      return result.output;
+    } else {
+      throw new Error("Hubo un error...");
+    }
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function updateProducts(data: ProductData, id: Product["id"]) {
+  try {
+    const NumberSchema = pipe(number(), transform(Number));
+    const result = safeParse(ProductSchema, {
+      id,
+      name: data.name,
+      price: parse(NumberSchema, +data.price),
+      availability: toBoolean(data.availability.toString()),
+    });
+
+    if (result.success) {
+      const url = `${import.meta.env.VITE_API_URL}/api/products/${id}`;
+      await axios.put(url, result.output);
+    }
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function updateProductAvailability(id: Product["id"]) {
+  try {
+    const url = `${import.meta.env.VITE_API_URL}/api/products/${id}`;
+    await axios.patch(url);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export async function deleteProduct(id: Product["id"]) {
+  try {
+    const url = `${import.meta.env.VITE_API_URL}/api/products/${id}`;
+    await axios.delete(url);
+  } catch (error) {
+    console.log(error);
   }
 }
